@@ -1,0 +1,89 @@
+# Peticiones de demostración (Visual Studio, Rider o la extensión REST Client de VS Code).
+@host = http://localhost:5013
+
+### Catálogo con inventario
+GET {{host}}/api/products
+
+### Pedido exitoso (201)
+POST {{host}}/api/orders
+Content-Type: application/json
+Idempotency-Key: demo-001
+
+{
+  "customerId": "cliente-1",
+  "paymentToken": "tok_visa_ok",
+  "items": [
+    { "productId": 1, "quantity": 2 },
+    { "productId": 2, "quantity": 1 }
+  ]
+}
+
+### Reintento con la misma llave: devuelve el mismo pedido (200), no descuenta otra vez
+POST {{host}}/api/orders
+Content-Type: application/json
+Idempotency-Key: demo-001
+
+{
+  "customerId": "cliente-1",
+  "paymentToken": "tok_visa_ok",
+  "items": [
+    { "productId": 1, "quantity": 2 },
+    { "productId": 2, "quantity": 1 }
+  ]
+}
+
+### Sin inventario suficiente (409): el producto 4 tiene 1 unidad
+POST {{host}}/api/orders
+Content-Type: application/json
+
+{
+  "customerId": "cliente-1",
+  "paymentToken": "tok_visa_ok",
+  "items": [{ "productId": 4, "quantity": 5 }]
+}
+
+### Pago rechazado (402): el inventario se libera
+POST {{host}}/api/orders
+Content-Type: application/json
+
+{
+  "customerId": "cliente-2",
+  "paymentToken": "tok_declined",
+  "items": [{ "productId": 3, "quantity": 1 }]
+}
+
+### Proveedor de pagos caído (502): el inventario se libera
+POST {{host}}/api/orders
+Content-Type: application/json
+
+{
+  "customerId": "cliente-2",
+  "paymentToken": "tok_gateway_error",
+  "items": [{ "productId": 3, "quantity": 1 }]
+}
+
+### Producto inexistente (422)
+POST {{host}}/api/orders
+Content-Type: application/json
+
+{
+  "customerId": "cliente-1",
+  "paymentToken": "tok_visa_ok",
+  "items": [{ "productId": 999, "quantity": 1 }]
+}
+
+### Solicitud inválida (400)
+POST {{host}}/api/orders
+Content-Type: application/json
+
+{
+  "customerId": "",
+  "paymentToken": "tok_visa_ok",
+  "items": [{ "productId": 1, "quantity": 0 }]
+}
+
+### Pedidos de un cliente (paginado, filtro opcional por estado)
+GET {{host}}/api/orders?customerId=cliente-1&status=Paid&page=1&pageSize=20
+
+### Pedido por id (reemplazar por un id real)
+GET {{host}}/api/orders/00000000-0000-0000-0000-000000000000
